@@ -347,6 +347,112 @@ Worker.prototype.query_comment = function(){
     });
 };
 
+Worker.prototype.query_repost = function(){
+    var start = (new Date()).set_weibo_date(this.start).getTime(),
+        end = (new Date()).set_weibo_date(this.end).getTime(),
+        _self = this,
+        weibo = undefined,
+        user = undefined,
+        page = 1,
+        cookie = this.cookie,
+        list = this.list,
+        max = undefined,
+        fans = [];
+
+    for(var i = 0; i < this.list.length; i ++){
+        if(this.list[i].state == "n_init_repost"){
+            user = this.list[i];
+            for(var j in user.weibo){
+                if(user.weibo[j].state == "n_init_repost"){
+                    weibo = user.weibo[j];
+                    fans = user.fans;
+                    break;
+                }
+            }
+
+            if(typeof weibo != "undefined"){
+                break;
+            }
+            else{
+                this.list[i].state == "u_need_calculate_effect"
+            }
+        }
+    }
+
+    return new Promise(function(resolve, reject){
+        if((typeof max == "undefined" || max >= page) && typeof weibo != "undefined"){
+            // https://weibo.cn/{用户uid}/repost?page=1
+            var url = "/repost/" + weibo.uid + "?page=" + page,
+                func = arguments.callee;
+
+            http.get_request({
+                url: url,
+                cookie: cookie,
+                success: function(html){
+                    var parsed = parser.get_repost_uid(html);
+                    max = parsed.max;
+
+                    for(var i = 0; i < parsed.uid.length; i ++){
+                        var uid = parsed.uid[i].uid,
+                            timestamp = new Date(parsed.uid[i].timestamp).getTime();
+                        if(fans.indexOf(uid) != -1 &&
+                            timestamp <= end &&
+                            timestamp >= start){
+                            var user_uid = parsed.uid[i].user_uid,
+                                timestamp = parsed.uid[i].timestamp
+
+                            if(parsed.uid[i].is_uid){
+                                weibo.repost.push({
+                                    uid: user_uid,
+                                    timestamp: timestamp
+                                });
+                            }
+                            else{
+                                _self.query_user_uid_to_arr(weibo.repost, user_uid, timestamp);
+                            }
+                        }
+                    }
+
+                    setTimeout(function(){
+                        page ++;
+                        func(resolve, reject);
+                    },
+                    10000);
+                }
+            })
+        }
+        else{
+            if(weibo){
+                weibo.state = "w_all_end";
+                setTimeout(function(){
+                    _self.query_repost().then(function(){
+                        resolve(_self);
+                    });
+                },
+                10000);
+            }
+            else{
+                resolve(_self);
+            }
+        }
+    });
+};
+
+Worker.prototype.query_user_uid_to_arr = function(arr, path, timestamp){
+    http.get_request({
+        url: path,
+        cookie: this.cookie,
+        success: function(html){
+            var parsed = parser.get_user_uid(html);
+            if(typeof arr == "array"){
+                arr.push({
+                    uid: parsed.uid,
+                    timestamp: timestamp
+                })
+            }
+        }
+    });
+}
 
 module.exports = Worker;
 
