@@ -444,7 +444,7 @@ Worker.prototype.query_user_uid_to_arr = function(arr, path, timestamp){
         cookie: this.cookie,
         success: function(html){
             var parsed = parser.get_user_uid(html);
-            if(typeof arr == "array"){
+            if(typeof arr == "array" && typeof parsed != "undefined"){
                 arr.push({
                     uid: parsed.uid,
                     timestamp: timestamp
