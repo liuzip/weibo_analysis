@@ -1,3 +1,57 @@
+var mysql = require('mysql');
+var config = require("./global.config");
+var connection = mysql.createConnection({
+    host: "localhost",
+    user: config.db_account.username,
+    password: config.db_account.password,
+    database: config.db_account.database
+});
+ 
+connection.connect();
+ 
+var sync_data_2_db = function(user_list){
+    if(typeof user_list != "object" ||
+        typeof user_list.length == "undefined"){
+        return;
+    }
+
+    var period_index = 0;
+
+    (new Promise(function(resolve, reject){
+        var sql = "insert into weibo_period (`period_start`, ` period_end`) values(" +
+            config.analysis_period.start + ", " +
+            config.analysis_period.end + ")";
+        connection.query(sql, function (error, results, fields) {
+            resolve();
+        });
+    })).then(function(){
+        return new Promise(function(resolve, reject){
+            var sql = "select max(`period_index`) as index from weibo_period;";
+            connection.query(sql, function (error, results, fields) {
+                period_index = results[0].index;
+                resolve();
+            });
+        })
+    }).then(function(){
+        return new Promise(function(resolve, reject){
+            var sql = "insert into weibo_user_influence (`user_uid`, `period_index`) values";
+
+            for(var i = 0; i < user_list.length; i ++){
+                sql += " ('" +
+                    user_list[i].uid + "', " + period_index + "),";
+            }
+
+            if(sql.charAt(sql.length - 1) == ","){
+                sql = sql.substring(0, sql.length - 1);
+            }
+
+            connection.query(sql, function (error, results, fields) {
+                resolve();
+            });
+        })
+    });
+}
+
 var calculate_UI = function(user_list){
     if(typeof user_list != "object" ||
         typeof user_list.length == "undefined"){
