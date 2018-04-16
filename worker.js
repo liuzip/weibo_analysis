@@ -25,7 +25,7 @@ var Worker = function(opt){
     this.list = [];
 
     this.threshold = Math.floor(((new Date()).set_weibo_date(this.end).getTime() - 
-            (new Date())set_weibo_date(this.start).getTime()) / 2 / 3600 / 24);
+            (new Date()).set_weibo_date(this.start).getTime()) / 2 / 3600 / 24);
 
     this.query_cookie();
 };
@@ -34,7 +34,6 @@ Worker.prototype.add_user = function(user){
     user.state = "n_init_weibo";
     this.list.push(user);
 }
-
 
 Worker.prototype.set_fans = function(workers){
     for(var i = 0; i < this.list.length; i ++){
