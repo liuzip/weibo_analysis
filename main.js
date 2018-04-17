@@ -1,6 +1,7 @@
 var config = require("./global.config");
 var Worker = require("./worker");
 var W_user = require("./weibo_user");
+var utils = require("./utils");
 
 var workers = [],
     w_users = [], // weibo user list
@@ -35,19 +36,27 @@ setTimeout(function(){
         }
     }
 
+    var tasks = [];
     for(var i = 0; i < workers.length; i ++){
-        workers[i].set_fans(workers);
-        workers[i].update_weibo(workers)
-            .then(function(worker){
-                return worker.query_comment();
-            });
-        /*
-        workers[i].query_comment()
-            .then(function(worker){
-                console.log(worker.list[1])
-            });
-            */
+        tasks[i] = workers[i].query_follow(workers);
     }
+
+    Promise.all(tasks).then(function(){
+        utils.calculate_fans(w_users);
+        for(var i = 0; i < workers.length; i ++){
+            tasks[i] = workers[i].query_weibo().then(function(worker){
+                worker.remove_zombie_user();
+                return worker.query_comment();
+            }).then(function(worker){
+                return worker.query_repost();
+            });
+        }
+
+        Promise.all(tasks).then(function(){
+            utils.calculate_UI(w_users);
+            utils.sync_data_2_db(w_users);
+        });
+    });
 },
 500);
 
